@@ -12,8 +12,10 @@ async def lifespan(app: FastAPI):
     setup_logging(debug=settings.DEBUG)
     from app.db.models import Base
     from app.db.session import engine
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
     yield
 
 
@@ -24,6 +26,7 @@ def create_app() -> FastAPI:
         debug=settings.DEBUG,
         lifespan=lifespan,
     )
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -31,11 +34,21 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
     register_exception_handlers(app)
     app.include_router(v1_router, prefix=settings.API_PREFIX)
 
+    @app.get("/", tags=["home"])
+    async def root():
+        return {
+            "message": "Smart Job Recommendation System API",
+            "status": "Running",
+            "health": "/health",
+            "docs": "/docs",
+        }
+
     @app.get("/health", tags=["health"])
-    async def health() -> dict:
+    async def health():
         return {"status": "ok"}
 
     return app
